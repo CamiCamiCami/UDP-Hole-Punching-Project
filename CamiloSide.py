@@ -1,6 +1,6 @@
 # Echo client program
 import socket
-
+#comment
 HOST = 'camidirr.webhop.me'
 PORT = 42069
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
