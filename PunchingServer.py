@@ -1,6 +1,8 @@
 import socket
 from ipaddress import ip_address
 import subprocess
+from time import sleep
+from typing import Tuple, List
 
 
 # Un servidor que recive las direcciones de dos clientes y les responde la información de conexion del otro
@@ -46,10 +48,10 @@ def add_client(ip: str, port: int, msg: bytes):
     print(f"SERVER INFO] Connected by {(ip, port)}")
 
 
-def get_addr(i: int) -> tuple[str, int]:
+def get_addr(i: int) -> Tuple[str, int]:
     if i == 1 or i == 0:
-        ip, port, _ = CLIENTS[i]
-        return (ip, port)
+        _ip, _port, _ = CLIENTS[i]
+        return _ip, _port
     else:
         raise ValueError
 
@@ -71,16 +73,16 @@ def update_server_url():
         print(f"SERVER INFO] Updating url {URL}")
         command = f"noip-duc -u cammilo -p hipnoiphate -g {URL} --once"
         subprocess.run(command, shell=True, executable="/bin/bash")
+        if get_url_ip() != get_actual_ip():
+            sleep(90)
 
 
 URL = "camidirr.webhop.me"
 HOST = ''
 PORT = 42069
-CLIENTS: list[tuple[str, int, str]] = []
+CLIENTS: List[Tuple[str, int, str]] = []
 
-print(get_actual_ip())
-print(get_url_ip())
-print(get_url_ip() == get_actual_ip())
+update_server_url()
 
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     s.bind((HOST, PORT))
