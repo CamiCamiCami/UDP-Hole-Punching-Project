@@ -10,8 +10,10 @@ class Source(Enum):
     SERVER = "srv"
     PEER = "peer"
 
+
 def ip2source(ip: str) -> Source:
     return Source.SERVER
+
 
 def is_digit(c: chr) -> bool:
     return 47 < ord(c) < 58
@@ -31,21 +33,28 @@ def parse_addr(addr: bytes):
 
 
 def report_message(data: bytes) -> None:
+    print("Message to report: ", data.hex())
     MESSAGES_LOCK.acquire()
     try:
         INCOMING_MESSAGES.append(data)
+        print("Message reported")
     finally:
         MESSAGES_LOCK.release()
 
 
 def receiving_thread(s: socket.socket) -> None:
+    print("THREAD-Thread woke up")
     while True:
+        print("THREAD-Searching new message")
         data: bytearray = bytearray()
         while len(data) == 0 or data[-1]:
             try:
                 data += s.recv(BUFFER_SIZE)
             except socket.error:
                 pass
+            finally:
+                print("THREAD-Received: ", data.hex())
+        print("THREAD-Found new message: ", data.hex())
         report_message(bytes(data))
 
 
@@ -54,7 +63,9 @@ def catch_message() -> bytes:
     msg = b""
     try:
         msg = INCOMING_MESSAGES.pop(0)
+        print("Message found")
     except IndexError:
+        print("No message found")
         pass
     finally:
         MESSAGES_LOCK.release()
@@ -64,11 +75,12 @@ def catch_message() -> bytes:
 def connect2server():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         receiver = Process(target=receiving_thread, args=(s,))
+        receiver.start()
 
         s.sendto(b"", (HOST, PORT))
         while not data:
             data = catch_message()
-            print('Received', repr(data))
+            print('Received', data.hex())
             sleep(1)
 
         camiloip, camiloport = parse_addr(data)
@@ -78,8 +90,10 @@ def connect2server():
         s.sendto(b"Mundo", (camiloip, camiloport))
         while not data:
             data = catch_message()
-            print('Received', repr(data))
+            print('Received', data.hex())
             sleep(1)
+
+        receiver.kill()
 
 
 BUFFER_SIZE = 1024
