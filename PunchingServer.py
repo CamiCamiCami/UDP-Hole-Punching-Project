@@ -79,7 +79,7 @@ def update_server_url():
             sleep(90)
 
 
-def prepare2send_addr(addr: Tuple[str, int]) -> bytearray:
+def prepare2send_addr(addr: Tuple[str, int]) -> bytes:
     ip, port = addr
     ip_parts = ip.split('.', 3)
     message = bytearray()
@@ -87,8 +87,9 @@ def prepare2send_addr(addr: Tuple[str, int]) -> bytearray:
         n = int(digits)
         message.append(n)
     port = port.to_bytes(2, 'big')
-    message = message + port
-    return message
+    message += port
+    message += b"\x00"
+    return bytes(message)
 
 
 URL = "camidirr.webhop.me"
@@ -107,7 +108,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
 
         add_client(ip, port, data)
 
-    msg: bytearray = prepare2send_addr(get_addr(0))
+    msg: bytes = prepare2send_addr(get_addr(0))
     s.sendto(msg, get_addr(1))
     msg = prepare2send_addr(get_addr(1))
     s.sendto(msg, get_addr(0))

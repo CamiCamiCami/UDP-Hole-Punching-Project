@@ -20,16 +20,34 @@ def parse_addr(addr: bytes):
     return ip, port
 
 
+def receive(s: socket.socket) -> bytes:
+    data = bytearray()
+    while data[-1] == '\0' and len(data) > 0:
+        try:
+            data += s.recv(1024)
+        except socket.timeout:
+            return b""
+    return bytes(data)
+
+
+
+def connect2server():
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.settimeout(30)
+
+        s.sendto(b"", (HOST, PORT))
+        data = receive(s)
+
+        print('Received', repr(data))
+        camiloip, camiloport = parse_addr(data)
+        print(camiloip)
+        print(camiloport)
+        s.sendto(b"Mundo", (camiloip, camiloport))
+        data = s.recv(1024)
+        print('Received', repr(data))
+
+
 HOST = 'camidirr.webhop.me'
 PORT = 42069
 
-with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-    s.sendto(b"", (HOST, PORT))
-    data = s.recv(1024)
-    print('Received', repr(data))
-    camiloip, camiloport = parse_addr(data)
-    print(camiloip)
-    print(camiloport)
-    s.sendto(b"Mundo", (camiloip, camiloport))
-    data = s.recv(1024)
-    print('Received', repr(data))
+connect2server()
