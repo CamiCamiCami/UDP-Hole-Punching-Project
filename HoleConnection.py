@@ -85,7 +85,7 @@ def msg_is_complete(msg) -> bool:
     return list(msg.keys()) == list(range(1, biggest_key + 1))
 
 
-def is_message_full(msg: dict[int, bytearray]):
+def is_message_full(msg: dict):
     return msg_exist(msg) and msg_has_end(msg) and msg_is_complete(msg)
 
 
