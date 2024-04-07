@@ -88,7 +88,7 @@ def prepare2send_addr(addr: Tuple[str, int]) -> bytes:
         message.append(n)
     port = port.to_bytes(2, 'big')
     message += port
-    message += b"\x00"
+    message += b"\x03\x01\x00"
     return bytes(message)
 
 
