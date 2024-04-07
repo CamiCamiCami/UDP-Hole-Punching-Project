@@ -101,12 +101,15 @@ def receive_message():
     message_builder = dict()
     while not is_message_full(message_builder):
         data = catch_message()
+        data = bytearray(data)
         if not data:
             sleep(1)
             continue
-        data = bytearray(data)
-        if data.pop() != b'\x00':
-            raise "Mal Formato"
+        print(data.hex())
+        t = data.pop()
+        print(t)
+        if t != b'\x00':
+            raise ValueError
         message_builder[data.pop()] = data
     
     return build_message(message_builder)
