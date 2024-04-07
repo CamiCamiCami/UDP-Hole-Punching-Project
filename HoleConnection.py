@@ -78,7 +78,7 @@ def connect2server():
         print(camiloip)
         print(camiloport)
 
-        s.sendto(b"Mundo", (camiloip, camiloport))
+        s.sendto(b"Mundo\0", (camiloip, camiloport))
         data = b""
         while not data:
             data = catch_message()
