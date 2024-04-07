@@ -166,4 +166,4 @@ INCOMING_MESSAGES: Queue = Queue()
 HOST = 'camidirr.webhop.me'
 PORT = 42069
 
-# connect2server()
+connect2server()
