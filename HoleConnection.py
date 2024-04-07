@@ -22,11 +22,13 @@ def parse_addr(addr: bytes):
 
 def receive(s: socket.socket) -> bytes:
     data = bytearray()
-    while len(data) == 0 or data[-1] == '\0':
+    while len(data) == 0 or data[-1]:
         try:
-            data += s.recv(1024)
+            data += s.recv(8)
         except socket.timeout:
             return b""
+        print(bool(data[-1]))
+        print(data[-1])
     return bytes(data)
 
 
