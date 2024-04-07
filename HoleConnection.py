@@ -78,7 +78,7 @@ def connect2server():
         receiver.start()
 
         s.sendto(b"", (HOST, PORT))
-        data = catch_message()
+        data = b""
         while not data:
             data = catch_message()
             print('Received', data.hex())
@@ -89,7 +89,7 @@ def connect2server():
         print(camiloport)
 
         s.sendto(b"Mundo", (camiloip, camiloport))
-        data = catch_message()
+        data = b""
         while not data:
             data = catch_message()
             print('Received', data.hex())
