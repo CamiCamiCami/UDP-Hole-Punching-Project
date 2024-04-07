@@ -52,7 +52,7 @@ def receiving_thread(s: socket.socket) -> None:
 def catch_message() -> bytes:
     msg = b""
     try:
-        msg = INCOMING_MESSAGES.get()
+        msg = INCOMING_MESSAGES.get(block=False)
         print("Message found: ", msg)
     except queue.Empty:
         print("No message found")
