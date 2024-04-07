@@ -108,7 +108,7 @@ def receive_message():
         print(data.hex())
         t = data.pop()
         print(t)
-        if t != b'\x00':
+        if t != 0:
             raise ValueError
         message_builder[data.pop()] = data
     
