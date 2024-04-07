@@ -1,7 +1,17 @@
 # Echo client program
 import socket
+from enum import Enum
+from multiprocessing import Process, Lock
+from time import sleep
 from typing import Tuple, List
 
+
+class Source(Enum):
+    SERVER = "srv"
+    PEER = "peer"
+
+def ip2source(ip: str) -> Source:
+    return Source.SERVER
 
 def is_digit(c: chr) -> bool:
     return 47 < ord(c) < 58
@@ -20,35 +30,61 @@ def parse_addr(addr: bytes):
     return ip, port
 
 
-def receive(s: socket.socket) -> bytes:
-    data = bytearray()
-    while len(data) == 0 or data[-1]:
-        try:
-            data += s.recv(8)
-        except socket.timeout:
-            return b""
-        print(bool(data[-1]))
-        print(data[-1])
-    return bytes(data)
+def report_message(data: bytes) -> None:
+    MESSAGES_LOCK.acquire()
+    try:
+        INCOMING_MESSAGES.append(data)
+    finally:
+        MESSAGES_LOCK.release()
 
+
+def receiving_thread(s: socket.socket) -> None:
+    while True:
+        data: bytearray = bytearray()
+        while len(data) == 0 or data[-1]:
+            try:
+                data += s.recv(BUFFER_SIZE)
+            except socket.error:
+                pass
+        report_message(bytes(data))
+
+
+def catch_message() -> bytes:
+    MESSAGES_LOCK.acquire()
+    msg = b""
+    try:
+        msg = INCOMING_MESSAGES.pop(0)
+    except IndexError:
+        pass
+    finally:
+        MESSAGES_LOCK.release()
+        return msg
 
 
 def connect2server():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.settimeout(30.0)
+        receiver = Process(target=receiving_thread, args=(s,))
 
         s.sendto(b"", (HOST, PORT))
-        data = receive(s)
+        while not data:
+            data = catch_message()
+            print('Received', repr(data))
+            sleep(1)
 
-        print('Received', repr(data))
         camiloip, camiloport = parse_addr(data)
         print(camiloip)
         print(camiloport)
+
         s.sendto(b"Mundo", (camiloip, camiloport))
-        data = receive(s)
-        print('Received', repr(data))
+        while not data:
+            data = catch_message()
+            print('Received', repr(data))
+            sleep(1)
 
 
+BUFFER_SIZE = 1024
+MESSAGES_LOCK = Lock()
+INCOMING_MESSAGES: List[bytes] = []
 HOST = 'camidirr.webhop.me'
 PORT = 42069
 
