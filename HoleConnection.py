@@ -22,7 +22,7 @@ def parse_addr(addr: bytes):
 
 def receive(s: socket.socket) -> bytes:
     data = bytearray()
-    while data[-1] == '\0' and len(data) > 0:
+    while len(data) == 0 or data[-1] == '\0':
         try:
             data += s.recv(1024)
         except socket.timeout:
@@ -33,7 +33,7 @@ def receive(s: socket.socket) -> bytes:
 
 def connect2server():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        s.settimeout(30)
+        s.settimeout(30.0)
 
         s.sendto(b"", (HOST, PORT))
         data = receive(s)
@@ -43,7 +43,7 @@ def connect2server():
         print(camiloip)
         print(camiloport)
         s.sendto(b"Mundo", (camiloip, camiloport))
-        data = s.recv(1024)
+        data = receive(s)
         print('Received', repr(data))
 
 
