@@ -1,4 +1,6 @@
+import array
 import socket
+from functools import reduce
 from ipaddress import ip_address
 import subprocess
 from time import sleep
@@ -77,6 +79,18 @@ def update_server_url():
             sleep(90)
 
 
+def prepare2send_addr(addr: Tuple[str, int]) -> bytearray:
+    ip, port = addr
+    ip_parts = ip.split('.', 3)
+    message = bytearray()
+    for digits in ip_parts:
+        n = int(digits)
+        message.append(n)
+    port = port.to_bytes(2, 'big')
+    message = message + port
+    return message
+
+
 URL = "camidirr.webhop.me"
 HOST = ''
 PORT = 42069
@@ -88,10 +102,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     s.bind((HOST, PORT))
 
     while len(CLIENTS) < 2:
-        msg, addr = s.recvfrom(1024)
+        data, addr = s.recvfrom(1024)
         ip, port = addr
 
-        add_client(ip, port, msg)
+        add_client(ip, port, data)
 
-    s.sendto(str(get_addr(0)).encode('utf-8'), get_addr(1))
-    s.sendto(str(get_addr(1)).encode('utf-8'), get_addr(0))
+    msg: bytearray = prepare2send_addr(get_addr(0))
+    s.sendto(msg, get_addr(1))
+    msg = prepare2send_addr(get_addr(1))
+    s.sendto(msg, get_addr(0))
