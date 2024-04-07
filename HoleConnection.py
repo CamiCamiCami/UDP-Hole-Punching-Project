@@ -1,7 +1,8 @@
 # Echo client program
+import queue
 import socket
 from enum import Enum
-from multiprocessing import Process, Lock
+from multiprocessing import Process, Lock, Queue
 from time import sleep
 from typing import Tuple, List
 
@@ -32,16 +33,6 @@ def parse_addr(addr: bytes):
     return ip, port
 
 
-def report_message(data: bytes) -> None:
-    print("THREAD-Message to report: ", data.hex())
-    MESSAGES_LOCK.acquire()
-    try:
-        INCOMING_MESSAGES.append(data)
-        print("THREAD-Message reported")
-    finally:
-        MESSAGES_LOCK.release()
-
-
 def receiving_thread(s: socket.socket) -> None:
     print("THREAD-Thread woke up")
     while True:
@@ -55,20 +46,18 @@ def receiving_thread(s: socket.socket) -> None:
             finally:
                 print("THREAD-Received: ", data.hex())
         print("THREAD-Found new message: ", data.hex())
-        report_message(bytes(data))
+        INCOMING_MESSAGES.put(data)
 
 
 def catch_message() -> bytes:
-    MESSAGES_LOCK.acquire()
     msg = b""
     try:
-        msg = INCOMING_MESSAGES.pop(0)
+        msg = INCOMING_MESSAGES.get()
         print("Message found: ", msg)
-    except IndexError:
+    except queue.Empty:
         print("No message found")
         pass
     finally:
-        MESSAGES_LOCK.release()
         return msg
 
 
@@ -101,8 +90,7 @@ def connect2server():
 
 
 BUFFER_SIZE = 1024
-MESSAGES_LOCK = Lock()
-INCOMING_MESSAGES: List[bytes] = []
+INCOMING_MESSAGES: Queue = Queue()
 HOST = 'camidirr.webhop.me'
 PORT = 42069
 
