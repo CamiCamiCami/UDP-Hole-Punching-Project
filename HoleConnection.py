@@ -33,11 +33,11 @@ def parse_addr(addr: bytes):
 
 
 def report_message(data: bytes) -> None:
-    print("Message to report: ", data.hex())
+    print("THREAD-Message to report: ", data.hex())
     MESSAGES_LOCK.acquire()
     try:
         INCOMING_MESSAGES.append(data)
-        print("Message reported")
+        print("THREAD-Message reported")
     finally:
         MESSAGES_LOCK.release()
 
@@ -63,7 +63,7 @@ def catch_message() -> bytes:
     msg = b""
     try:
         msg = INCOMING_MESSAGES.pop(0)
-        print("Message found")
+        print("Message found: ", msg)
     except IndexError:
         print("No message found")
         pass
@@ -81,8 +81,9 @@ def connect2server():
         data = b""
         while not data:
             data = catch_message()
-            print('Received', data.hex())
-            sleep(1)
+            if data:
+                print('Received', data.hex())
+            sleep(3)
 
         camiloip, camiloport = parse_addr(data)
         print(camiloip)
@@ -92,8 +93,9 @@ def connect2server():
         data = b""
         while not data:
             data = catch_message()
-            print('Received', data.hex())
-            sleep(1)
+            if data:
+                print('Received', data.hex())
+            sleep(3)
 
         receiver.kill()
 
