@@ -71,8 +71,8 @@ def catch_message() -> bytes:
         return msg
 
 
-def is_EOT(b: int):
-    return int.from_bytes(b, 'big') == EOT
+def is_EOT(n: int):
+    return n == EOT
 
 
 def msg_exist(msg) -> bool:
@@ -81,8 +81,9 @@ def msg_exist(msg) -> bool:
 
 def msg_has_end(msg) -> bool:
     last_key = max(msg.keys())
-    print(msg[last_key][-1].hex())
+    print(msg[last_key][-1])
     print(EOT)
+    print(msg[last_key][-1] == EOT)
     return is_EOT(msg[last_key][-1])
 
 
