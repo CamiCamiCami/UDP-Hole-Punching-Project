@@ -19,6 +19,7 @@ def msg_to_ip(old_ip: bytes) -> str:
 
 
 def handle_same_client(check_client, new_ip, new_port):
+    return False
     check_ip, _, _ = check_client
 
     if check_ip == ip:
