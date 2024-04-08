@@ -1,7 +1,7 @@
 # Echo client program
 import queue
 import socket
-from curses.ascii import EOT
+from curses.ascii import EOT, ETX
 from enum import Enum
 from math import ceil
 from multiprocessing import Process, Lock, Queue
@@ -71,20 +71,13 @@ def catch_message() -> bytes:
         return msg
 
 
-def is_EOT(n: int):
-    return n == EOT
-
-
 def msg_exist(msg) -> bool:
     return bool(msg)
 
 
 def msg_has_end(msg) -> bool:
     last_key = max(msg.keys())
-    print(msg[last_key][-1])
-    print(EOT)
-    print(msg[last_key][-1] == EOT)
-    return is_EOT(msg[last_key][-1])
+    return msg[last_key][-1] == ETX
 
 
 def msg_is_complete(msg) -> bool:
@@ -119,7 +112,6 @@ def receive_message():
             continue
         print(data.hex())
         t = data.pop()
-        print(t)
         if t != 0:
             raise ValueError
         message_builder[data.pop()] = data
