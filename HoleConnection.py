@@ -1,7 +1,6 @@
 # Echo client program
 import queue
 import socket
-from curses.ascii import ETX
 from enum import Enum
 from math import ceil
 from multiprocessing import Process, Queue
@@ -77,7 +76,7 @@ def msg_exist(msg) -> bool:
 
 def msg_has_end(msg) -> bool:
     last_key = max(msg.keys())
-    return msg[last_key][-1] == ETX
+    return msg[last_key][-1] == int.from_bytes(ETX, 'big')
 
 
 def msg_is_complete(msg) -> bool:
@@ -130,7 +129,7 @@ def divide_message(data: bytearray) -> List[bytearray]:
 
 
 def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
-    data += str(ETX)
+    data += ETX
     data = data.encode('utf-8')
     data = bytearray(data)
     messages = divide_message(data)
@@ -166,6 +165,7 @@ def connect2server():
         receiver.kill()
 
 
+ETX = b'\x03'  # End Of Text
 BUFFER_SIZE = 1024
 INCOMING_MESSAGES: Queue = Queue()
 HOST = 'camidirr.webhop.me'
