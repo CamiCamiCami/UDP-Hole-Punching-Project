@@ -71,13 +71,19 @@ def catch_message() -> bytes:
         return msg
 
 
+def is_EOT(b: int):
+    return int.from_bytes(b, 'big') == EOT
+
+
 def msg_exist(msg) -> bool:
-    return msg
+    return bool(msg)
 
 
 def msg_has_end(msg) -> bool:
     last_key = max(msg.keys())
-    return msg[last_key][-1] == EOT
+    print(msg[last_key][-1].hex())
+    print(EOT)
+    return is_EOT(msg[last_key][-1])
 
 
 def msg_is_complete(msg) -> bool:
@@ -86,13 +92,18 @@ def msg_is_complete(msg) -> bool:
 
 
 def is_message_full(msg: dict):
+    print(msg_exist(msg))
+    if not msg:
+        return False
+    print(msg_has_end(msg))
+    print(msg_is_complete(msg))
     return msg_exist(msg) and msg_has_end(msg) and msg_is_complete(msg)
 
 
 def build_message(message_builder: dict):
     message = bytearray()
     max_key = max(message_builder.keys())
-    for i in range(1, max_key+1):
+    for i in range(1, max_key + 1):
         message += message_builder[i]
     return bytes(message)
 
@@ -111,7 +122,7 @@ def receive_message():
         if t != 0:
             raise ValueError
         message_builder[data.pop()] = data
-    
+
     return build_message(message_builder)
 
 
