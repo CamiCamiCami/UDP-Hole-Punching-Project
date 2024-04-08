@@ -153,11 +153,9 @@ def connect2server():
                 print('Received', data.hex())
             sleep(3)
 
-        camiloip, camiloport = parse_addr(data)
-        print(camiloip)
-        print(camiloport)
+        addr = parse_addr(data)
 
-        s.sendto(b"Mundo\0", (camiloip, camiloport))
+        send_message(s, "Buen dia", addr)
         data = b""
         while not data:
             data = receive_message()
