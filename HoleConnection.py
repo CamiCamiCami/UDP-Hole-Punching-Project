@@ -7,6 +7,44 @@ from multiprocessing import Process, Queue
 from time import sleep
 from typing import Tuple, List
 
+def get_pck_number(data: bytearray) -> int:
+
+
+def open_pck(pck: bytearray) -> bytearray:
+    pck.pop()
+    pck.pop(0)
+    pck.
+
+class MessageBuilder():
+    def __init__(self):
+        self.parts = dict()
+        self.id = None
+        self.has_end = False
+        self.expected_pck = None
+        
+    def add(self, data: bytearray):
+        if self.check_id(data):
+            data.pop()
+            self.parts[data.pop()] = data[1:]
+            if data[-2] == ETX:
+                self.has_end = True
+                self.expected_pck = 
+
+
+    def check_id(self, data: bytearray):
+        if not self.id:
+            self.set_id(data)
+            return True
+        return data[0] == self.id
+    
+    def set_id(self, data:bytearray):
+        self.id = data[0]
+    
+    def.is
+
+    def build(self) -> bytes:
+        
+
 
 class Source(Enum):
     SERVER = "srv"
