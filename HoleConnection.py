@@ -76,7 +76,7 @@ def msg_exist(msg) -> bool:
 
 def msg_has_end(msg) -> bool:
     last_key = max(msg.keys())
-    return msg[last_key][-1] == int.from_bytes(ETX, 'big')
+    return msg[last_key][-1] == ord(ETX)
 
 
 def msg_is_complete(msg) -> bool:
@@ -165,7 +165,7 @@ def connect2server():
         receiver.kill()
 
 
-ETX = b'\x03'  # End Of Text
+ETX = '\x03'  # End Of Text
 BUFFER_SIZE = 1024
 INCOMING_MESSAGES: Queue = Queue()
 HOST = 'camidirr.webhop.me'
