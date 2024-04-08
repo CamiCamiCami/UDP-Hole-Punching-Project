@@ -1,10 +1,10 @@
 # Echo client program
 import queue
 import socket
-from curses.ascii import EOT, ETX
+from curses.ascii import ETX
 from enum import Enum
 from math import ceil
-from multiprocessing import Process, Lock, Queue
+from multiprocessing import Process, Queue
 from time import sleep
 from typing import Tuple, List
 
@@ -130,7 +130,7 @@ def divide_message(data: bytearray) -> List[bytearray]:
 
 
 def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
-    data += EOT
+    data += str(ETX)
     data = data.encode('utf-8')
     data = bytearray(data)
     messages = divide_message(data)
