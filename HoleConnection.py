@@ -115,7 +115,8 @@ class Receiver():
     def get(self) -> Tuple[Source, str | Tuple[str, int]]:
         pck, addr = self._recive_from()
         ip, port = addr
-
+        source = None
+        msg = None
         if ip == self.get_server_ip():
             source = Source.SERVER
             msg = self.process_from_server(pck)
@@ -207,6 +208,7 @@ def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
     for i, msg in enumerate(messages, 1):
         msg += int2byte(i)
         msg += b'\x00'
+        msg = b'\x01' + msg 
         print("por enviar: ", msg)
         s.sendto(msg, addr)
 
