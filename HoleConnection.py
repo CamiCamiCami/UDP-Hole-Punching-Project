@@ -130,7 +130,7 @@ class Receiver():
         return source, msg
     
 
-    def process_from_server(pck) -> Tuple[str, int]:
+    def process_from_server(self, pck) -> Tuple[str, int]:
         ip_raw = pck[:4]
         port_raw = pck[4:6]
         ip = ""
