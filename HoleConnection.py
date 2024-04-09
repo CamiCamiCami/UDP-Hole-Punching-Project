@@ -142,7 +142,7 @@ def catch_message() -> bytes:
 
 
 def remove_etx(msg: str) -> str:
-    if msg[-1] == ETX:
+    if is_etx(msg[-1]):
         return msg[:-1]
     else:
         raise ValueError
