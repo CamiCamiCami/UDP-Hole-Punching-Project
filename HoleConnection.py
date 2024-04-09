@@ -62,9 +62,9 @@ class MessageBuilder():
         return bool(self.parts) and self.has_end and self._msg_is_complete()
 
     def build(self) -> str:
-        msg = ""
-        for s in self.parts.values():
-            msg += s
+        msg = bytearray()
+        for data in self.parts.values():
+            msg += data
         return msg
 
     def _msg_is_complete(self) -> bool:
