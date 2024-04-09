@@ -142,7 +142,7 @@ class Receiver():
 
     def process_from_peer(self, pck):
         to_cache = []
-        builder = MessageBuilder(pck)
+        builder = MessageBuilder()
         builder.add(pck)
 
         while not builder.can_build():
