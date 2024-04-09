@@ -168,6 +168,7 @@ def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
     for i, msg in enumerate(messages, 1):
         msg += int2byte(i)
         msg += b'\x00'
+        msg = b'\x01' + msg
         s.sendto(msg, addr)
 
 
@@ -178,11 +179,7 @@ def connect2server():
 
         s.sendto(b"", (HOST, PORT))
         data = b""
-        while not data:
-            data = receive_message()
-            if data:
-                print('Received', data.hex())
-            sleep(3)
+        data = receive_message()
 
         addr = parse_addr(data)
 
