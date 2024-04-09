@@ -207,7 +207,7 @@ def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
     for i, msg in enumerate(messages, 1):
         msg += int2byte(i)
         msg += b'\x00'
-        msg = b'\x01' + msg
+        print("por enviar: ", msg)
         s.sendto(msg, addr)
 
 
@@ -222,6 +222,7 @@ def connect2server():
         recived = receiver.get()
         _, peer_addr = recived
 
+        print(peer_addr)
         send_message(s, "Buen dia", peer_addr)
         _, msg = receiver.get()
         print(msg)
