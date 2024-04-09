@@ -7,43 +7,57 @@ from multiprocessing import Process, Queue
 from time import sleep
 from typing import Tuple, List
 
-def get_pck_number(data: bytearray) -> int:
+def is_terminator(byte):
+    return ord(byte) == 0
 
-
-def open_pck(pck: bytearray) -> bytearray:
-    pck.pop()
-    pck.pop(0)
-    pck.
+def open_pck(pck: bytearray) -> Tuple[int, int, str]:
+    if not is_terminator(pck.pop()):
+        raise ValueError # temporal 
+    
+    part = pck.pop()
+    id = pck.pop(0)
+    return id, part, repr(pck)
 
 class MessageBuilder():
     def __init__(self):
-        self.parts = dict()
-        self.id = None
-        self.has_end = False
-        self.expected_pck = None
-        
-    def add(self, data: bytearray):
-        if self.check_id(data):
-            data.pop()
-            self.parts[data.pop()] = data[1:]
-            if data[-2] == ETX:
+        self.parts: dict = dict()
+        self.id: int | None = None
+        self.has_end: bool = False
+        self.expected_pcks: int | None = None
+
+    def set_id(self, id:int):
+        self.id = id
+
+    def get_id(self):
+        return self.id
+
+    def add(self, pck: bytearray):
+        id, key, data = open_pck(pck)
+        if self._check_id(id):
+            self.parts[key] = data
+            if data[-1] == ETX:
                 self.has_end = True
-                self.expected_pck = 
+                self.expected_pcks = key
 
+    def can_build(self):
+        return bool(self.parts) and self.has_end and self._msg_is_complete()
 
-    def check_id(self, data: bytearray):
+    def build(self) -> str:
+        msg = ""
+        for s in self.parts.values():
+            msg += s
+        return msg
+
+    def _msg_is_complete(self) -> bool:
+        return len(self.parts) == self.expected_pcks
+    
+    def _check_id(self, data_id: int):
         if not self.id:
-            self.set_id(data)
+            self.set_id(data_id)
             return True
-        return data[0] == self.id
+        return data_id == self.id
     
-    def set_id(self, data:bytearray):
-        self.id = data[0]
-    
-    def.is
 
-    def build(self) -> bytes:
-        
 
 
 class Source(Enum):
@@ -108,52 +122,25 @@ def catch_message() -> bytes:
         return msg
 
 
-def msg_exist(msg) -> bool:
-    return bool(msg)
-
-
-def msg_has_end(msg) -> bool:
-    last_key = max(msg.keys())
-    return msg[last_key][-1] == ord(ETX)
-
-
-def msg_is_complete(msg) -> bool:
-    biggest_key = max(msg.keys())
-    return list(msg.keys()) == list(range(1, biggest_key + 1))
-
-
-def is_message_full(msg: dict):
-    print(msg_exist(msg))
-    if not msg:
-        return False
-    print(msg_has_end(msg))
-    print(msg_is_complete(msg))
-    return msg_exist(msg) and msg_has_end(msg) and msg_is_complete(msg)
-
-
-def build_message(message_builder: dict):
-    message = bytearray()
-    max_key = max(message_builder.keys())
-    for i in range(1, max_key + 1):
-        message += message_builder[i]
-    return bytes(message)
+def remove_etx(msg: str) -> str:
+    if msg[-1] == ETX:
+        return msg[:-1]
+    else:
+        raise ValueError
 
 
 def receive_message():
-    message_builder = dict()
-    while not is_message_full(message_builder):
-        data = catch_message()
-        data = bytearray(data)
-        if not data:
+    builder = MessageBuilder()
+    while not builder.can_build():
+        pck = catch_message()
+        pck = bytearray(pck)
+        if not pck:
             sleep(1)
             continue
-        print(data.hex())
-        t = data.pop()
-        if t != 0:
-            raise ValueError
-        message_builder[data.pop()] = data
+        builder.add(pck)
 
-    return build_message(message_builder)
+    msg = builder.build()
+    return remove_etx(msg)
 
 
 def divide_message(data: bytearray) -> List[bytearray]:
