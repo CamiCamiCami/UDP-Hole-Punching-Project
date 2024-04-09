@@ -8,7 +8,14 @@ from time import sleep
 from typing import Tuple, List
 
 def is_terminator(byte):
-    return ord(byte) == 0
+    try:
+        byte = chr(byte)
+    except TypeError:
+        if not type(byte) == chr:
+            raise TypeError 
+    finally:
+        return byte == '\0'
+
 
 def open_pck(pck: bytearray) -> Tuple[int, int, str]:
     if not is_terminator(pck.pop()):
