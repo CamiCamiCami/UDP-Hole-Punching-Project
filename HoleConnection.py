@@ -16,14 +16,23 @@ def is_terminator(byte):
     finally:
         return byte == '\0'
 
+def is_etx(byte):
+    try:
+        byte = chr(byte)
+    except TypeError:
+        if not type(byte) == chr:
+            raise TypeError 
+    finally:
+        return byte == ETX
 
-def open_pck(pck: bytearray) -> Tuple[int, int, str]:
+
+def open_pck(pck: bytearray) -> Tuple[int, int, bytearray]:
     if not is_terminator(pck.pop()):
         raise ValueError # temporal 
     
     part = pck.pop()
     id = pck.pop(0)
-    return id, part, repr(pck)
+    return id, part, pck
 
 class MessageBuilder():
     def __init__(self):
@@ -40,9 +49,12 @@ class MessageBuilder():
 
     def add(self, pck: bytearray):
         id, key, data = open_pck(pck)
+        print("Paquete abierto: ", (id, key, data))
+        print("id propia es:", self.id, self._check_id(id))
+
         if self._check_id(id):
             self.parts[key] = data
-            if data[-1] == ETX:
+            if is_etx(data[-1]):
                 self.has_end = True
                 self.expected_pcks = key
 
@@ -162,7 +174,7 @@ def divide_message(data: bytearray) -> List[bytearray]:
 
 def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
     data += ETX
-    data = data.encode('utf-8')
+    data = data.encode('ascii')
     data = bytearray(data)
     messages = divide_message(data)
     for i, msg in enumerate(messages, 1):
