@@ -1,4 +1,3 @@
-# Echo client program
 import queue
 import socket
 from enum import Enum
@@ -6,6 +5,24 @@ from math import ceil
 from multiprocessing import Process, Queue
 from time import sleep
 from typing import Tuple, List
+
+
+def receiving_thread(s: socket.socket) -> None:
+    print("THREAD-Thread woke up")
+    while True:
+        print("THREAD-Searching new message")
+        data: bytearray = bytearray()
+        while len(data) == 0 or data[-1]:
+            try:
+                new, addr = s.recvfrom(BUFFER_SIZE)
+                data += new
+                print("THREAD-Received: ", data.hex())
+            except socket.error:
+                print("THREAD-Unidentified error, continuing")
+                pass
+                
+        INCOMING_MESSAGES.put((data, addr))
+
 
 def is_terminator(byte):
     try:
@@ -26,6 +43,12 @@ def is_etx(byte):
         return byte == ETX
 
 
+def remove_etx(msg):
+    if is_etx(msg[-1]):
+        return msg[:-1]
+    else:
+        raise ValueError
+
 def open_pck(pck: bytearray) -> Tuple[int, int, bytearray]:
     if not is_terminator(pck.pop()):
         raise ValueError # temporal 
@@ -40,6 +63,10 @@ class MessageBuilder():
         self.id: int | None = None
         self.has_end: bool = False
         self.expected_pcks: int | None = None
+    
+    def __init__(self, pck: bytearray) -> None:
+        self.__init__()
+        self.add(pck)
 
     def set_id(self, id:int):
         self.id = id
@@ -47,7 +74,7 @@ class MessageBuilder():
     def get_id(self):
         return self.id
 
-    def add(self, pck: bytearray):
+    def add(self, pck: bytearray) -> bool:
         id, key, data = open_pck(pck)
         print("Paquete abierto: ", (id, key, data))
         print("id propia es:", self.id, self._check_id(id))
@@ -57,6 +84,8 @@ class MessageBuilder():
             if is_etx(data[-1]):
                 self.has_end = True
                 self.expected_pcks = key
+            return True
+        return False
 
     def can_build(self):
         return bool(self.parts) and self.has_end and self._msg_is_complete()
@@ -77,11 +106,76 @@ class MessageBuilder():
         return data_id == self.id
     
 
-
-
 class Source(Enum):
     SERVER = "srv"
     PEER = "peer"
+
+
+class Receiver():
+    def __init__(self, socket: socket.socket):
+        self.s = socket
+        self.cache_pcks = queue.Queue()
+
+    def get(self) -> Tuple[Source, str | Tuple[str, int]]:
+        pck, addr = self._recive_from()
+        ip, port = addr
+
+        if ip == self.get_server_ip():
+            source = Source.SERVER
+            msg = self.process_from_server(pck)
+        else:
+            source = Source.PEER
+            msg = self.process_from_peer(pck)
+        
+        return source, msg
+    
+
+    def process_from_server(pck) -> Tuple[str, int]:
+        ip_raw = pck[:4]
+        port_raw = pck[4:6]
+        ip = ""
+        for n in ip_raw:
+            digits = str(n)
+            ip += digits
+            ip += '.'
+        ip = ip[:-1]
+
+        port = int.from_bytes(port_raw, 'big')
+        return ip, port
+
+
+    def process_from_peer(self, pck):
+        to_cache = []
+        builder = MessageBuilder(pck)
+
+        while not builder.can_build():
+            pck, addr = self._recive_from()
+            if not builder.add(pck):
+                to_cache.append((pck, addr))
+        
+        for pck_addr in to_cache:
+            self.cache_pcks.put(pck_addr, block=True)
+        
+        msg = builder.build()
+        return remove_etx(msg)
+
+    def _receive(self) -> bytearray:
+        pck, _ = self._receive_from()
+        return pck
+
+    def _recive_from(self) -> Tuple[bytearray, Tuple[str, int]]:
+        try:
+            pck = self.cache_pcks.get(block=False)
+        except queue.Empty:
+            pck = self._wait_receive()
+        finally:
+            return pck
+
+    def _wait_receive(self):
+        return INCOMING_MESSAGES.get(block=True, timeout=None)    
+
+    def get_server_ip(self) -> str:
+        return self.s.gethostbyname(HOST)
 
 
 def int2byte(n: int) -> bytes:
@@ -97,70 +191,6 @@ def ip2source(ip: str) -> Source:
 
 def is_digit(c: chr) -> bool:
     return 47 < ord(c) < 58
-
-
-def parse_addr(addr: bytes):
-    ip_raw = addr[:4]
-    port_raw = addr[4:6]
-    ip = ""
-    for n in ip_raw:
-        digits = str(n)
-        ip += digits
-        ip += '.'
-    ip = ip[:-1]
-    port = int.from_bytes(port_raw, 'big')
-    return ip, port
-
-
-def receiving_thread(s: socket.socket) -> None:
-    print("THREAD-Thread woke up")
-    while True:
-        print("THREAD-Searching new message")
-        data: bytearray = bytearray()
-        while len(data) == 0 or data[-1]:
-            try:
-                data += s.recv(BUFFER_SIZE)
-            except socket.error:
-                print("THREAD-Unidentified error, continuing")
-                pass
-            finally:
-                print("THREAD-Received: ", data.hex())
-        print("THREAD-Found new message: ", data.hex())
-        INCOMING_MESSAGES.put(data)
-
-
-def catch_message() -> bytes:
-    msg = b""
-    try:
-        msg = INCOMING_MESSAGES.get(block=False)
-        print("Message found: ", msg)
-    except queue.Empty:
-        print("No message found")
-        pass
-    finally:
-        return msg
-
-
-def remove_etx(msg: str) -> str:
-    if is_etx(msg[-1]):
-        return msg[:-1]
-    else:
-        raise ValueError
-
-
-def receive_message():
-    builder = MessageBuilder()
-    while not builder.can_build():
-        pck = catch_message()
-        pck = bytearray(pck)
-        if not pck:
-            sleep(1)
-            continue
-        builder.add(pck)
-
-    msg = builder.build()
-    return remove_etx(msg)
-
 
 def divide_message(data: bytearray) -> List[bytearray]:
     max_size = BUFFER_SIZE - 2
@@ -186,24 +216,20 @@ def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
 
 def connect2server():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        receiver = Process(target=receiving_thread, args=(s,))
-        receiver.start()
+        thread = Process(target=receiving_thread, args=(s,))
+        thread.start()
+
+        receiver = Receiver(s)
 
         s.sendto(b"", (HOST, PORT))
-        data = b""
-        data = receive_message()
+        recived = receiver.get()
+        _, peer_addr = recived
 
-        addr = parse_addr(data)
+        send_message(s, "Buen dia", peer_addr)
+        _, msg = Receiver.get()
+        print(msg)
 
-        send_message(s, "Buen dia", addr)
-        data = b""
-        while not data:
-            data = receive_message()
-            if data:
-                print('Received', data.hex())
-            sleep(3)
-
-        receiver.kill()
+        thread.kill()
 
 
 ETX = '\x03'  # End Of Text
