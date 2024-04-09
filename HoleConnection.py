@@ -63,10 +63,6 @@ class MessageBuilder():
         self.id: int | None = None
         self.has_end: bool = False
         self.expected_pcks: int | None = None
-    
-    def __init__(self, pck: bytearray) -> None:
-        self.__init__()
-        self.add(pck)
 
     def set_id(self, id:int):
         self.id = id
@@ -147,6 +143,7 @@ class Receiver():
     def process_from_peer(self, pck):
         to_cache = []
         builder = MessageBuilder(pck)
+        builder.add(pck)
 
         while not builder.can_build():
             pck, addr = self._recive_from()
@@ -226,7 +223,7 @@ def connect2server():
         _, peer_addr = recived
 
         send_message(s, "Buen dia", peer_addr)
-        _, msg = Receiver.get()
+        _, msg = receiver.get()
         print(msg)
 
         thread.kill()
