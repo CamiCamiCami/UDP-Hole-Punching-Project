@@ -175,7 +175,7 @@ class Receiver():
         return INCOMING_MESSAGES.get(block=True, timeout=None)    
 
     def get_server_ip(self) -> str:
-        return self.s.gethostbyname(HOST)
+        return socket.gethostbyname(HOST)
 
 
 def int2byte(n: int) -> bytes:
