@@ -6,7 +6,7 @@ import socket
 from math import ceil
 from enum import Enum
 
-INCOMING_MESSAGES: Queue = Queue()
+
 ACKNOWLEDMENTS: Queue = Queue()
 BUFFER_SIZE = 1024
 HOST = 'camidirr.webhop.me'
@@ -56,11 +56,6 @@ class MessageBuilder():
             self.set_id(data_id)
             return True
         return data_id == self.id
-    
-
-class Source(Enum):
-    SERVER = "srv"
-    PEER = "peer"
 
 
 class Receiver():

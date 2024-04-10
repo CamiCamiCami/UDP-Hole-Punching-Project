@@ -31,3 +31,10 @@ def remove_etx(msg):
         return msg[:-1]
     else:
         raise ValueError
+
+def remove_terminator(msg):
+    if is_terminator(msg[-1]):
+        return msg[:-1]
+    else:
+        raise ValueError
+
