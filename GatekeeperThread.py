@@ -9,8 +9,6 @@ from Utils import *
 INCOMING_MESSAGES: Queue = Queue()
 EXITING_MESSAGES: Queue = Queue()
 BUFFER_SIZE = 1024
-HOSTRESS = 'camidirr.webhop.me'
-PORT = 42069
 SERV_URL = ""
 NAME = ""
 
@@ -143,26 +141,35 @@ def gatekeeper_thread(s: socket.socket, server_url: str, name: str) -> None:
     init_thread(s, server_url, name)
     connect2srv(s)
     connect2peer(s)
+    addr = contact_server(s)
     keep_alive_timer = Timer(10.0)
     timeout_timer = Timer(30.0)
     contact_server_timer = Timer(5.0)
+    print("THREAD-Entering main loop")
     while True:
         if keep_alive_timer.has_finished():
+            print("THREAD-keep_alive_timer finished!")
             send_keep_alive(s)
             keep_alive_timer.reset()
 
         if timeout_timer.has_finished():
+            print("THREAD-timeout_timer finished!")
             reconnect2peer(s)
             timeout_timer.reset()
 
         if contact_server_timer.has_finished():
+            print("THREAD-contact_server_timer finished!")
             addr = contact_server(s)
             contact_server_timer.reset()
 
+        print("THREAD-Going to send everything")
         send_all(s)
+        print("THREAD-Everything sent!")
 
         try:
+            print("THREAD-Waiting on package")
             pck = receive(s)
+            print("THREAD-received: ", pck.hex())
             msg_type = from_pck(pck)
             if msg_type == MessageType.PEER or msg_type == MessageType.KEEP_ALIVE:
                 timeout_timer.reset()
@@ -174,10 +181,6 @@ def gatekeeper_thread(s: socket.socket, server_url: str, name: str) -> None:
         except TimeoutError:
             pass
 
-
-    print("THREAD-Searching new message")
-    print("THREAD-Received: ", data.hex())
-    print("THREAD-Unidentified error, continuing")
 
 
 
