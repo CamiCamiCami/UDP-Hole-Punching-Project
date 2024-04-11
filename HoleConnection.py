@@ -1,28 +1,16 @@
 import queue
 
-from ConnectionHelpers import *
+from GatekeeperThread import INCOMING_MESSAGES, gatekeeper_thread
 from Utils import * 
 import socket 
 from math import ceil
 from time import time_ns
-from multiprocessing import Process, Lock
+from multiprocessing import Process, Lock, Manager
 from typing import Tuple, List
 
+from timer import Timer
+
 SEND_LOCK = Lock()
-INCOMING_MESSAGES: Queue = Queue()
-ACK = '\x06'
-
-class Timer:
-    def __init__(self, seconds: float):
-        self.length = ceil(seconds * 1000000000)
-        self.end_time = time_ns() + self.length
-
-    def has_finished(self) -> bool:
-        return time_ns() > self.end_time
-
-    def reset(self):
-        self.end_time = time_ns() + self.length
-
 
 def _get_pck(timeout=None):
     try:
@@ -41,7 +29,7 @@ class MailBox:
         if not self.peer_cache_pcks.empty():
             return self.peer_cache_pcks.get_nowait()
 
-        server_ip = socket.gethostbyname(self.server)
+        server_ip = get_server_ip(self.server)
         pck, (ip, _) = self.get_pck(timeout=timeout)
         while server_ip == ip:
             pck, (ip, _) = self.get_pck(timeout=timeout)
@@ -49,7 +37,7 @@ class MailBox:
 
     def get_srv_pck(self, timeout=None):
         to_cache = []
-        server_ip = socket.gethostbyname(self.server)
+        server_ip = get_server_ip(self.server)
         pck, (ip, _) = self.get_pck(timeout=timeout)
         while server_ip != ip:
             to_cache.append(pck)
@@ -60,38 +48,11 @@ class MailBox:
     def return_peer_pck(self, pck: bytes):
         self.peer_cache_pcks.put(pck)
 
-
-def pack2peer(msg: str) -> bytes:
-    pck = msg.encode('ascii')
-    return pck + b'\x00'
-
-def open_peer_pck(pck: bytes):
-    pck = remove_terminator(pck)
-    return pck.decode('ascii')
-
-def open_server_pck(pck):
-    ip_raw = pck[:4]
-    port_raw = pck[4:6]
-    ip = ""
-    for n in ip_raw:
-        digits = str(n)
-        ip += digits
-        ip += '.'
-    ip = ip[:-1]
-
-    port = int.from_bytes(port_raw, 'big')
-    return ip, port
-
-
-def is_ack(pck) -> bool:
-    return open_peer_pck(pck) == ACK
-
 def ___sendto(sock, pck, addr):
     SEND_LOCK.acquire()
     n = sock.sendto(pck, addr)
     SEND_LOCK.release()
     return n
-
 
 class HoleConnection:
     def __init__(self, sock:socket.socket, server: str, name: str) -> None:
@@ -100,9 +61,9 @@ class HoleConnection:
         self.name = name
         self.cached_pck = None
         self.send_lock = Lock()
-        self.sendto = lambda pck, addr: ___sendto(sock, pck, addr)
+        self._sendto = lambda pck, addr: ___sendto(sock, pck, addr)
 
-        self.receiving_thread = Process(target=receiving_thread, args=(self.s,))
+        self.receiving_thread = Process(target=gatekeeper_thread, args=(sock,))
         self.receiving_thread.start()
 
     def send(self, msg: str):
@@ -114,7 +75,17 @@ class HoleConnection:
         self.wait4ack(addr)
 
     def receive(self):
-        pass
+        while True:
+            timeout = 30.0
+            pck = self.mailbox.get_peer_pck(timeout=timeout)
+            if is_ack(pck):
+                continue #Descarta paquetes de reconocimiento por llegar cuando no deben
+
+            msg = open_peer_pck(pck)
+            return msg
+
+    def sendto(self, msg, addr):
+        self._sendto(msg, addr)
 
 
     def wait4ack(self, addr):
@@ -171,36 +142,9 @@ class HoleConnection:
         print("Me hicieron vrg")
         self.receiving_thread.kill()
 
-
-def send_message(s: socket.socket, data: str, addr: Tuple[str, int]) -> None:
-    data += ETX
-    data = data.encode('ascii')
-    data = bytearray(data)
-    messages = divide_message(data)
-    for i, msg in enumerate(messages, 1):
-        msg += int2byte(i)
-        msg += b'\x00'
-        msg = b'\x01' + msg 
-        print("por enviar: ", msg)
-        print(s.sendto(msg, addr))
-
-
 def connect2server():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-
-
-        receiver = Receiver(s)
-
-        s.sendto(b"", (HOST, PORT))
-        recived = receiver.get()
-        _, peer_addr = recived
-
-        print(peer_addr)
-        send_message(s, "Buen dia", peer_addr)
-        _, msg = receiver.get()
-        print(msg)
-
-        thread.kill()
+        pass
 
 
 
