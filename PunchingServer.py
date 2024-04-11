@@ -4,65 +4,59 @@ from functools import reduce
 from ipaddress import ip_address
 import subprocess
 from time import sleep
-from typing import Tuple, List
+from typing import Tuple, List, Dict
+
+from timer import Timer
 
 
 # Un servidor que recive las direcciones de dos clientes y les responde la información de conexion del otro
 # Los clientes se deben connectar enviando un paquete udp al servidor que preferiblemente contenga su dirección IP anterior
 
-def msg_to_ip(old_ip: bytes) -> str:
-    try:
-        ip_obj = ip_address(old_ip)
-        return str(old_ip)
-    except ValueError:
-        return ""
+class Client:
+    def __init__(self, name: str, ip: str, port: int):
+        self.name = name
+        self.ip = ip
+        self.port = port
+        self.timer = Timer(30)
+
+    def reset_timeout_timer(self):
+        self.timer.reset()
+
+    def is_timeout(self):
+        return self.timer.has_finished()
+
+    def get_addr(self):
+        return self.ip, self.port
+
+    def get_name(self):
+        return self.name
+
+    def copy(self, client: Client):
+        self.name = client.name
+        self.ip = client.ip
+        self.port = client.port
+
+class ClientPair(dict):
+    def __init__(self):
+        super().__init__()
+
+    def connect(self, client: Client):
+        try:
+            self[client.name].copy(client)
+            return
+        except AttributeError:
+            if len(self) < 2:
+                self[client.name] = client
+
+    def disconnect(self, name: str):
+        self.pop(name)
 
 
-def handle_same_client(check_client, new_ip, new_port):
-    return False
-    check_ip, _, _ = check_client
 
-    if check_ip == ip:
-        print("SERVER INFO] Won't serve same client twice")
-        CLIENTS.remove(check_client)
-        return True
-    return False
-
-
-def handle_ip_change(check_client, old_ip):
-    check_ip, _, _ = check_client
-    if check_ip == old_ip and old_ip is True:
-        print("SERVER INFO] Won't serve same client twice")
-        CLIENTS.remove(check_client)
-        return True
-    return False
-
-
-def add_client(ip: str, port: int, msg: bytes):
-    old_ip = msg_to_ip(msg)
-
-    for client in CLIENTS:
-        if handle_same_client(client, ip, port):
-            break
-        if handle_ip_change(client, old_ip):
-            break
-
-    CLIENTS.append((ip, port, old_ip))
-    print(f"SERVER INFO] Connected by {(ip, port)}")
-
-
-def get_addr(i: int) -> Tuple[str, int]:
-    if i == 1 or i == 0:
-        _ip, _port, _ = CLIENTS[i]
-        return _ip, _port
-    else:
-        raise ValueError
 
 
 def get_url_ip():
-    command = f"dig +short {URL}"
-    result = subprocess.run(command, shell=True, executable="/bin/bash", stdout=subprocess.PIPE)
-    return str(result.stdout)
+    return socket.gethostbyname(URL)
 
 
 def get_actual_ip():
@@ -92,16 +86,43 @@ def prepare2send_addr(addr: Tuple[str, int]) -> bytes:
     message += b'\x00'
     return bytes(message)
 
+def wait4clients(s: socket.socket):
+    while len(CLIENTS) < 2:
+        pck, addr = s.recvfrom(1024)
+        name = pck.decode('ascii')
+        ip, port = addr
+        print(f"SERVER INFO] Connected by {(ip, port, name)}")
+        client = Client(name, ip, port)
+        CLIENTS.connect(client)
+    return list(CLIENTS.keys())
 
 URL = "camidirr.webhop.me"
 HOST = ''
 PORT = 42069
-CLIENTS: List[Tuple[str, int, str]] = []
+CLIENTS: Dict[str, Client] = ClientPair()
 
 update_server_url()
 
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
     s.bind((HOST, PORT))
+    names = wait4clients(s)
+    while True:
+        if CLIENTS[names[0]].is_timeout():
+            CLIENTS.
+            wait4clients()
+        if client1_timer.has_finished():
+            CLIENTS.pop(1)
+            wait4clients()
+
+        try:
+            pck, addr = s.recvfrom(1024)
+            ip, port = addr
+            name = pck.decode('ascii')
+            set_client()
+        except socket.timeout:
+            pass
+
+
 
     while len(CLIENTS) < 2:
         data, addr = s.recvfrom(1024)
